@@ -2,7 +2,7 @@
 
 Artificially Intelligent Development Environment for SQL learning.
 
-A local SQL IDE with LLM-powered practice question generation, similar to LeetCode/HackerRank for SQL. Ultimately will be capable of producing practice questions for targeted areas e.g. utiliing window functions
+A local SQL IDE with LLM-powered practice question generation, similar to LeetCode/HackerRank for SQL. Capable of producing targetted practice questions as well as generating random questions based on difficulty
 
 ## Features
 
