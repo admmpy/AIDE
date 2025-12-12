@@ -2,12 +2,19 @@ import asyncpg
 from contextlib import asynccontextmanager
 from typing import Optional
 
+from fastapi import HTTPException
+
 from app.config import get_settings
 
 settings = get_settings()
 
 # Global connection pool
 _pool: Optional[asyncpg.Pool] = None
+
+
+def is_pool_available() -> bool:
+    """Check if the database pool is available."""
+    return _pool is not None
 
 
 async def create_pool() -> asyncpg.Pool:
@@ -33,7 +40,10 @@ async def close_pool() -> None:
 async def get_pool() -> asyncpg.Pool:
     """Get the current connection pool, creating it if necessary."""
     if _pool is None:
-        return await create_pool()
+        raise HTTPException(
+            status_code=503,
+            detail="Database not available. Please ensure PostgreSQL is running."
+        )
     return _pool
 
 

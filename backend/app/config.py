@@ -5,8 +5,8 @@ from functools import lru_cache
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
-    # PostgreSQL
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/aide"
+    # PostgreSQL (macOS Homebrew default: current user, no password)
+    database_url: str = "postgresql://localhost:5432/aide"
     db_pool_min_size: int = 2
     db_pool_max_size: int = 10
     
