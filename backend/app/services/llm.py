@@ -1,0 +1,146 @@
+import httpx
+import re
+from typing import Any
+
+from app.config import get_settings
+
+settings = get_settings()
+
+
+class OllamaClient:
+    """Async client for Ollama LLM API."""
+    
+    def __init__(
+        self,
+        base_url: str | None = None,
+        model: str | None = None,
+        timeout: float = 120.0,
+    ):
+        self.base_url = base_url or settings.ollama_base_url
+        self.model = model or settings.ollama_model
+        self.timeout = timeout
+    
+    async def generate(
+        self,
+        prompt: str,
+        system: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> str:
+        """
+        Generate text using Ollama.
+        
+        Args:
+            prompt: The user prompt
+            system: Optional system prompt
+            temperature: Sampling temperature (0-1)
+            max_tokens: Maximum tokens to generate
+        
+        Returns:
+            Generated text response
+        """
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        
+        if system:
+            payload["system"] = system
+        
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("response", "")
+    
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> str:
+        """
+        Chat completion using Ollama.
+        
+        Args:
+            messages: List of {"role": "user/assistant/system", "content": "..."}
+            temperature: Sampling temperature (0-1)
+            max_tokens: Maximum tokens to generate
+        
+        Returns:
+            Generated text response
+        """
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("message", {}).get("content", "")
+    
+    async def is_available(self) -> bool:
+        """Check if Ollama is running and the model is available."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{self.base_url}/api/tags")
+                if response.status_code != 200:
+                    return False
+                
+                data = response.json()
+                models = [m.get("name", "") for m in data.get("models", [])]
+                # Check if our model is available (handle tags like "qwen3:4b")
+                return any(self.model in m or m.startswith(self.model.split(":")[0]) for m in models)
+        except Exception:
+            return False
+
+
+def extract_json(text: str) -> str:
+    """
+    Extract JSON from LLM response, handling markdown code blocks.
+    
+    Args:
+        text: Raw LLM response that may contain JSON
+    
+    Returns:
+        Extracted JSON string
+    
+    Raises:
+        ValueError: If no valid JSON found
+    """
+    # Remove thinking tags from qwen3 if present
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    
+    # Try to find JSON in code blocks first
+    code_block_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    if code_block_match:
+        return code_block_match.group(1).strip()
+    
+    # Try to find raw JSON object
+    json_match = re.search(r"\{[\s\S]*\}", text)
+    if json_match:
+        return json_match.group(0)
+    
+    raise ValueError("No JSON found in response")
+
+
+# Default client instance
+llm_client = OllamaClient()
