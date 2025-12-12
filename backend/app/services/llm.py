@@ -7,17 +7,19 @@ from app.config import get_settings
 settings = get_settings()
 
 
+MODEL = "qwen3:4b"  # Fixed model - do not change
+
+
 class OllamaClient:
-    """Async client for Ollama LLM API."""
+    """Async client for Ollama LLM API. Uses qwen3:4b exclusively."""
     
     def __init__(
         self,
         base_url: str | None = None,
-        model: str | None = None,
         timeout: float = 120.0,
     ):
         self.base_url = base_url or settings.ollama_base_url
-        self.model = model or settings.ollama_model
+        self.model = MODEL  # Always use qwen3:4b
         self.timeout = timeout
     
     async def generate(
@@ -98,7 +100,7 @@ class OllamaClient:
             return data.get("message", {}).get("content", "")
     
     async def is_available(self) -> bool:
-        """Check if Ollama is running and the model is available."""
+        """Check if Ollama is running and qwen3:4b is available."""
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
@@ -107,8 +109,8 @@ class OllamaClient:
                 
                 data = response.json()
                 models = [m.get("name", "") for m in data.get("models", [])]
-                # Check if our model is available (handle tags like "qwen3:4b")
-                return any(self.model in m or m.startswith(self.model.split(":")[0]) for m in models)
+                # Check specifically for qwen3:4b
+                return any("qwen3:4b" in m or m == "qwen3:4b" for m in models)
         except Exception:
             return False
 
