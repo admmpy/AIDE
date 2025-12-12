@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
-import MonacoEditor, { OnMount } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
+import MonacoEditor, { type OnMount } from '@monaco-editor/react';
+import type { editor, IPosition } from 'monaco-editor';
 
 interface EditorProps {
   value: string;
@@ -36,7 +36,7 @@ export function Editor({
 
     // Configure SQL language
     monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: editor.ITextModel, position: IPosition) => {
         const word = model.getWordUntilPosition(position);
         const range = {
           startLineNumber: position.lineNumber,
