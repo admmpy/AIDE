@@ -1,4 +1,4 @@
-import { usePracticeStore } from '../stores/practiceStore';
+import { usePracticeStore, computeStats } from '../stores/practiceStore';
 import type { Difficulty } from '../types';
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
@@ -7,7 +7,8 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   hard: '#ef4444',
 };
 
-function formatDuration(ms: number): string {
+function formatDuration(ms: number | undefined): string {
+  if (!ms) return '-';
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   
@@ -18,8 +19,9 @@ function formatDuration(ms: number): string {
 }
 
 export function HistoryPanel() {
-  const { history, getStats, clearHistory } = usePracticeStore();
-  const stats = getStats();
+  const history = usePracticeStore((state) => state.history);
+  const clearHistory = usePracticeStore((state) => state.clearHistory);
+  const stats = computeStats(history);
 
   return (
     <div className="history-panel">
@@ -38,16 +40,23 @@ export function HistoryPanel() {
           <div className="stat-label">Total Attempted</div>
         </div>
         <div className="stat-card success">
-          <div className="stat-value">{stats.solved}</div>
-          <div className="stat-label">Solved</div>
+          <div className="stat-value">{stats.correct}</div>
+          <div className="stat-label">Correct</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">
-            {stats.total > 0 
-              ? Math.round((stats.solved / stats.total) * 100) 
-              : 0}%
-          </div>
-          <div className="stat-label">Success Rate</div>
+          <div className="stat-value">{stats.accuracy}%</div>
+          <div className="stat-label">Accuracy</div>
+        </div>
+      </div>
+
+      <div className="stats-extra">
+        <div className="stat-item">
+          <span className="stat-label">Current Streak:</span>
+          <span className="stat-value">{stats.recentStreak}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Avg Hints Used:</span>
+          <span className="stat-value">{stats.averageHintsUsed}</span>
         </div>
       </div>
 
@@ -61,7 +70,12 @@ export function HistoryPanel() {
               {d.charAt(0).toUpperCase() + d.slice(1)}
             </span>
             <span className="difficulty-progress">
-              {stats.byDifficulty[d].solved}/{stats.byDifficulty[d].total}
+              {stats.byDifficulty[d].correct}/{stats.byDifficulty[d].total}
+              {stats.byDifficulty[d].total > 0 && (
+                <span className="difficulty-accuracy">
+                  ({stats.byDifficulty[d].accuracy}%)
+                </span>
+              )}
             </span>
           </div>
         ))}
@@ -71,27 +85,27 @@ export function HistoryPanel() {
         {history.length === 0 ? (
           <p className="empty-history">No practice history yet. Start practicing!</p>
         ) : (
-          history.map((result) => (
+          history.map((result, index) => (
             <div 
-              key={result.id} 
-              className={`history-item ${result.solved ? 'solved' : 'failed'}`}
+              key={`${result.questionId}-${index}`}
+              className={`history-item ${result.isCorrect ? 'solved' : 'failed'}`}
             >
               <div className="history-item-main">
                 <span 
                   className="history-difficulty"
-                  style={{ backgroundColor: DIFFICULTY_COLORS[result.difficulty] }}
+                  style={{ backgroundColor: DIFFICULTY_COLORS[result.question.difficulty] }}
                 >
-                  {result.difficulty.charAt(0).toUpperCase()}
+                  {result.question.difficulty.charAt(0).toUpperCase()}
                 </span>
-                <span className="history-title">{result.title}</span>
-                <span className={`history-status ${result.solved ? 'solved' : 'failed'}`}>
-                  {result.solved ? '✓' : '✗'}
+                <span className="history-title">{result.question.title}</span>
+                <span className={`history-status ${result.isCorrect ? 'solved' : 'failed'}`}>
+                  {result.isCorrect ? '✓' : '✗'}
                 </span>
               </div>
               <div className="history-item-meta">
-                <span>{result.attempts} attempt{result.attempts !== 1 ? 's' : ''}</span>
-                <span>{formatDuration(result.time_taken_ms)}</span>
-                <span>{new Date(result.completed_at).toLocaleDateString()}</span>
+                <span>{result.hintsUsed} hint{result.hintsUsed !== 1 ? 's' : ''}</span>
+                <span>{formatDuration(result.executionTimeMs)}</span>
+                <span>{new Date(result.attemptedAt).toLocaleDateString()}</span>
               </div>
             </div>
           ))

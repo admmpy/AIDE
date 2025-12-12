@@ -23,6 +23,14 @@ export interface SQLExecuteResponse {
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+export type Domain =
+  | 'e-commerce'
+  | 'HR/employees'
+  | 'social media'
+  | 'healthcare'
+  | 'finance'
+  | 'logistics';
+
 export interface TableSchema {
   name: string;
   columns: string[];
@@ -30,13 +38,18 @@ export interface TableSchema {
 }
 
 export interface Question {
+  id?: string;
   title: string;
   description: string;
+  difficulty: Difficulty;
+  domain?: Domain;
   tables: TableSchema[];
   setup_sql: string;
   expected_query: string;
   expected_columns: string[];
   hints: string[];
+  schemaName?: string;
+  createdAt?: string;
 }
 
 export interface GenerateQuestionRequest {
@@ -76,11 +89,26 @@ export interface HintResponse {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface QuestionResult {
-  id: string;
-  title: string;
-  difficulty: Difficulty;
-  solved: boolean;
-  attempts: number;
-  time_taken_ms: number;
-  completed_at: string;
+  questionId: string;
+  question: Question;
+  userQuery: string;
+  isCorrect: boolean;
+  attemptedAt: string;
+  hintsUsed: number;
+  executionTimeMs?: number;
+}
+
+export interface HistoryStats {
+  total: number;
+  correct: number;
+  accuracy: number;
+  byDifficulty: Record<Difficulty, { total: number; correct: number; accuracy: number }>;
+  recentStreak: number;
+  averageHintsUsed: number;
+}
+
+export interface ExportedHistory {
+  version: 1;
+  exportedAt: string;
+  results: QuestionResult[];
 }

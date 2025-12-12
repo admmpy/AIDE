@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Difficulty } from '../types';
+import type { Difficulty, Question } from '../types';
 import { usePracticeStore } from '../stores/practiceStore';
 import { useGenerateQuestion, useCheckAnswer, useCleanupSession } from '../hooks/useApi';
 import { QuestionCard } from './QuestionCard';
@@ -16,7 +16,6 @@ const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
 export function PracticePanel() {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [query, setQuery] = useState('');
-  const [attempts, setAttempts] = useState(0);
   
   const {
     currentSession,
@@ -26,7 +25,7 @@ export function PracticePanel() {
     setGenerating,
     setChecking,
     incrementHints,
-    addToHistory,
+    recordResult,
   } = usePracticeStore();
 
   const generateMutation = useGenerateQuestion();
@@ -41,13 +40,21 @@ export function PracticePanel() {
 
     setGenerating(true);
     setQuery('');
-    setAttempts(0);
 
     try {
       const response = await generateMutation.mutateAsync({ difficulty });
       
+      // Add difficulty to the question for tracking
+      const questionWithMeta: Question = {
+        ...response.question,
+        id: response.session_id,
+        difficulty,
+        schemaName: response.schema_name,
+        createdAt: new Date().toISOString(),
+      };
+      
       setSession({
-        question: response.question,
+        question: questionWithMeta,
         schemaName: response.schema_name,
         sessionId: response.session_id,
         startTime: Date.now(),
@@ -69,7 +76,7 @@ export function PracticePanel() {
     }
 
     setChecking(true);
-    setAttempts((a) => a + 1);
+    const startTime = Date.now();
 
     try {
       const response = await checkMutation.mutateAsync({
@@ -78,18 +85,19 @@ export function PracticePanel() {
         session_id: currentSession.sessionId,
       });
 
+      const executionTimeMs = Date.now() - startTime;
+
       if (response.correct) {
         toast.success('Correct! Well done! 🎉');
         
-        // Add to history
-        addToHistory({
-          id: currentSession.sessionId,
-          title: currentSession.question.title,
-          difficulty,
-          solved: true,
-          attempts: attempts + 1,
-          time_taken_ms: Date.now() - currentSession.startTime,
-          completed_at: new Date().toISOString(),
+        // Record result to history
+        recordResult({
+          questionId: currentSession.sessionId,
+          question: currentSession.question,
+          userQuery: query.trim(),
+          isCorrect: true,
+          hintsUsed: currentSession.hintsRevealed,
+          executionTimeMs,
         });
       } else if (response.error) {
         toast.error(`Query error: ${response.error}`);
@@ -112,15 +120,14 @@ export function PracticePanel() {
   const handleGiveUp = () => {
     if (!currentSession) return;
 
-    // Add to history as unsolved
-    addToHistory({
-      id: currentSession.sessionId,
-      title: currentSession.question.title,
-      difficulty,
-      solved: false,
-      attempts,
-      time_taken_ms: Date.now() - currentSession.startTime,
-      completed_at: new Date().toISOString(),
+    // Record as incorrect in history
+    recordResult({
+      questionId: currentSession.sessionId,
+      question: currentSession.question,
+      userQuery: query.trim() || '-- gave up',
+      isCorrect: false,
+      hintsUsed: currentSession.hintsRevealed,
+      executionTimeMs: Date.now() - currentSession.startTime,
     });
 
     // Show expected query

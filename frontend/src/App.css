@@ -647,6 +647,33 @@ body {
   margin-top: 0.25rem;
 }
 
+.stats-extra {
+  display: flex;
+  gap: 2rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5rem;
+}
+
+.stats-extra .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stats-extra .stat-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0;
+}
+
+.stats-extra .stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .difficulty-stats {
   display: flex;
   gap: 1.5rem;
@@ -669,6 +696,12 @@ body {
 .difficulty-progress {
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+.difficulty-accuracy {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
 }
 
 .history-list {
