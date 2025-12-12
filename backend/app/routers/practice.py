@@ -8,13 +8,14 @@ from app.config import get_settings
 from app.database import get_connection
 from app.models.schemas import (
     GenerateQuestionRequest,
+    GenerateCustomQuestionRequest,
     GenerateQuestionResponse,
     CheckAnswerRequest,
     CheckAnswerResponse,
     HintResponse,
     Question,
 )
-from app.services.question_gen import generate_question, generate_schema_name
+from app.services.question_gen import generate_question, generate_custom_question, generate_schema_name
 from app.services.sql_executor import execute_query, execute_setup_sql, validate_schema_name
 
 settings = get_settings()
@@ -103,6 +104,57 @@ async def generate_practice_question(
         "created_at": time.time(),
     }
     
+    return GenerateQuestionResponse(
+        question=question,
+        schema_name=schema_name,
+        session_id=session_id,
+    )
+
+
+@router.post("/generate-custom", response_model=GenerateQuestionResponse)
+async def generate_custom_practice_question(
+    request: GenerateCustomQuestionRequest,
+) -> GenerateQuestionResponse:
+    session_id = str(uuid4())
+
+    if not _check_rate_limit(session_id):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Maximum {settings.rate_limit_per_minute} questions per minute.",
+        )
+
+    try:
+        question = await generate_custom_question(user_prompt=request.user_prompt)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Failed to generate question. Is Ollama running? Error: {str(e)}",
+        )
+
+    schema_name = generate_schema_name()
+
+    async with get_connection() as conn:
+        success, error = await execute_setup_sql(
+            conn=conn,
+            setup_sql=question.setup_sql,
+            schema_name=schema_name,
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to set up practice database: {error}",
+            )
+
+    _active_sessions[session_id] = {
+        "schema_name": schema_name,
+        "question": question,
+        "hints_revealed": 0,
+        "created_at": time.time(),
+    }
+
     return GenerateQuestionResponse(
         question=question,
         schema_name=schema_name,

@@ -73,6 +73,30 @@ DIFFICULTY_GUIDE = {
 }
 
 
+def build_custom_prompt(user_prompt: str) -> str:
+    """Build prompt from user's natural language request."""
+    return f"""Generate a SQL practice question based on this request:
+
+USER REQUEST: {user_prompt}
+
+OUTPUT FORMAT (JSON only):
+{{
+  "title": "Title",
+  "description": "Problem statement.",
+  "tables": [{{"name": "t1", "columns": ["id SERIAL", "c1 TYPE"], "sample_data": [[1, "v"]]}}],
+  "setup_sql": "CREATE TABLE ...; INSERT INTO ...;",
+  "expected_query": "SELECT ...",
+  "expected_columns": ["c1"],
+  "hints": ["hint1", "hint2"]
+}}
+
+CONSTRAINTS:
+- Max {settings.max_practice_tables} tables, {settings.max_practice_rows} total rows
+- Realistic data, no placeholders
+- Valid PostgreSQL 14 syntax
+- Match the difficulty/topic requested by the user"""
+
+
 def build_prompt(difficulty: str, domain: str) -> str:
     """Build the question generation prompt."""
     max_tables = {"easy": 1, "medium": 3, "hard": 5}.get(difficulty, 3)
@@ -188,6 +212,85 @@ Please fix the issue and regenerate. Remember:
             last_error = str(e)
     
     raise ValueError(f"Failed to generate question after {max_retries + 1} attempts. Last error: {last_error}")
+
+
+async def generate_custom_question(
+    user_prompt: str,
+    max_retries: int = 2,
+) -> Question:
+    """Generate a practice question using the LLM from a natural-language request."""
+    prompt = build_custom_prompt(user_prompt)
+
+    last_error: str | None = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            if attempt > 0 and last_error:
+                retry_prompt = f"""The previous attempt had an error: {last_error}
+
+Please fix the issue and regenerate. Remember:
+- Output ONLY valid JSON
+- Ensure all SQL statements are valid PostgreSQL 14
+- Make sure expected_query actually works with the setup_sql schema
+
+{prompt}"""
+                raw_response = await llm_client.generate(
+                    prompt=retry_prompt,
+                    system=SYSTEM_PROMPT,
+                    temperature=0.7,
+                )
+            else:
+                raw_response = await llm_client.generate(
+                    prompt=prompt,
+                    system=SYSTEM_PROMPT,
+                    temperature=0.7,
+                )
+
+            json_str = extract_json(raw_response)
+            data = json.loads(json_str)
+
+            required_fields = [
+                "title",
+                "description",
+                "tables",
+                "setup_sql",
+                "expected_query",
+                "expected_columns",
+                "hints",
+            ]
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                raise ValueError(f"Missing required fields: {missing}")
+
+            tables = [
+                TableSchema(
+                    name=t["name"],
+                    columns=t["columns"],
+                    sample_data=t["sample_data"],
+                )
+                for t in data["tables"]
+            ]
+
+            return Question(
+                title=data["title"],
+                description=data["description"],
+                tables=tables,
+                setup_sql=data["setup_sql"],
+                expected_query=data["expected_query"],
+                expected_columns=data["expected_columns"],
+                hints=data["hints"],
+            )
+
+        except json.JSONDecodeError as e:
+            last_error = f"Invalid JSON: {str(e)}"
+        except KeyError as e:
+            last_error = f"Missing field: {str(e)}"
+        except Exception as e:
+            last_error = str(e)
+
+    raise ValueError(
+        f"Failed to generate question after {max_retries + 1} attempts. Last error: {last_error}"
+    )
 
 
 def generate_schema_name() -> str:

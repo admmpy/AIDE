@@ -3,6 +3,7 @@ import type {
   SQLExecuteRequest,
   SQLExecuteResponse,
   GenerateQuestionRequest,
+  GenerateCustomQuestionRequest,
   GenerateQuestionResponse,
   CheckAnswerRequest,
   CheckAnswerResponse,
@@ -58,6 +59,17 @@ export function useGenerateQuestion() {
   return useMutation({
     mutationFn: async (request: GenerateQuestionRequest): Promise<GenerateQuestionResponse> => {
       return fetchApi<GenerateQuestionResponse>('/practice/generate', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+    },
+  });
+}
+
+export function useGenerateCustomQuestion() {
+  return useMutation({
+    mutationFn: async (request: GenerateCustomQuestionRequest): Promise<GenerateQuestionResponse> => {
+      return fetchApi<GenerateQuestionResponse>('/practice/generate-custom', {
         method: 'POST',
         body: JSON.stringify(request),
       });

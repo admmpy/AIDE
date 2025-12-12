@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { FreeQueryPanel } from './components/FreeQueryPanel';
+import { CustomQuestionPanel } from './components/FreeQueryPanel';
 import { PracticePanel } from './components/PracticePanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import './App.css';
@@ -33,7 +33,7 @@ function AppContent() {
             className={`tab ${activeTab === 'query' ? 'active' : ''}`}
             onClick={() => setActiveTab('query')}
           >
-            Free Query
+            Custom Question
           </button>
           <button
             className={`tab ${activeTab === 'practice' ? 'active' : ''}`}
@@ -51,7 +51,7 @@ function AppContent() {
       </header>
 
       <main className="app-main">
-        {activeTab === 'query' && <FreeQueryPanel />}
+        {activeTab === 'query' && <CustomQuestionPanel />}
         {activeTab === 'practice' && <PracticePanel />}
         {activeTab === 'history' && <HistoryPanel />}
       </main>

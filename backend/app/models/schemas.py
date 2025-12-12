@@ -58,6 +58,11 @@ class GenerateQuestionRequest(BaseModel):
     domain: str | None = Field(default=None, description="Optional domain (e-commerce, HR, etc.)")
 
 
+class GenerateCustomQuestionRequest(BaseModel):
+    """Request to generate a custom practice question from natural language."""
+    user_prompt: str = Field(..., min_length=10, max_length=500)
+
+
 class GenerateQuestionResponse(BaseModel):
     """Response containing the generated question and session info."""
     question: Question

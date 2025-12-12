@@ -63,6 +63,10 @@ export interface GenerateQuestionResponse {
   session_id: string;
 }
 
+export interface GenerateCustomQuestionRequest {
+  user_prompt: string;
+}
+
 export interface CheckAnswerRequest {
   query: string;
   schema_name: string;
