@@ -16,7 +16,7 @@ class OllamaClient:
     def __init__(
         self,
         base_url: str | None = None,
-        timeout: float = 120.0,
+        timeout: float = 300.0,
     ):
         self.base_url = base_url or settings.ollama_base_url
         self.model = MODEL  # Always use qwen3:4b
@@ -27,7 +27,7 @@ class OllamaClient:
         prompt: str,
         system: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 2048,
     ) -> str:
         """
         Generate text using Ollama.
@@ -67,7 +67,7 @@ class OllamaClient:
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 2048,
     ) -> str:
         """
         Chat completion using Ollama.

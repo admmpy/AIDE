@@ -21,57 +21,55 @@ DOMAINS = [
 
 # System prompt for consistent JSON output
 SYSTEM_PROMPT = """You are a SQL question generator for PostgreSQL 14.
-Output ONLY valid JSON matching the exact schema provided.
-No explanations, no markdown formatting outside the JSON, no extra text.
-Ensure all SQL is valid PostgreSQL 14 syntax."""
+Output ONLY valid JSON. No markdown, no explanations."""
 
 # Few-shot examples by difficulty
 FEW_SHOTS = {
     "easy": """{
   "title": "High-Value Orders",
-  "description": "Find all orders with a total amount greater than 500, sorted by amount descending.",
+  "description": "Find all orders with amount > 500, sorted by amount desc.",
   "tables": [{
     "name": "orders",
-    "columns": ["order_id SERIAL PRIMARY KEY", "customer_id INT", "amount DECIMAL(10,2)", "created_at DATE"],
-    "sample_data": [[1, 101, 250.00, "2024-01-15"], [2, 102, 750.50, "2024-01-16"], [3, 101, 125.00, "2024-01-17"], [4, 103, 890.00, "2024-01-18"], [5, 102, 50.00, "2024-01-19"]]
+    "columns": ["order_id SERIAL PRIMARY KEY", "customer_id INT", "amount DECIMAL(10,2)"],
+    "sample_data": [[1, 101, 750.50], [2, 102, 125.00]]
   }],
-  "setup_sql": "CREATE TABLE orders (order_id SERIAL PRIMARY KEY, customer_id INT, amount DECIMAL(10,2), created_at DATE); INSERT INTO orders (customer_id, amount, created_at) VALUES (101, 250.00, '2024-01-15'), (102, 750.50, '2024-01-16'), (101, 125.00, '2024-01-17'), (103, 890.00, '2024-01-18'), (102, 50.00, '2024-01-19');",
+  "setup_sql": "CREATE TABLE orders (order_id SERIAL PRIMARY KEY, customer_id INT, amount DECIMAL(10,2)); INSERT INTO orders (customer_id, amount) VALUES (101, 750.50), (102, 125.00);",
   "expected_query": "SELECT * FROM orders WHERE amount > 500 ORDER BY amount DESC;",
-  "expected_columns": ["order_id", "customer_id", "amount", "created_at"],
-  "hints": ["Filter rows based on a numeric condition", "Use WHERE with a comparison operator"]
+  "expected_columns": ["order_id", "customer_id", "amount"],
+  "hints": ["Use WHERE amount > 500", "Use ORDER BY amount DESC"]
 }""",
 
     "medium": """{
   "title": "Customer Order Totals",
-  "description": "Find each customer's name and their total order amount. Only include customers who have spent more than 1000 in total. Sort by total spent descending.",
+  "description": "Find customers who spent > 1000 total. Show name and total_spent, sorted desc.",
   "tables": [
-    {"name": "customers", "columns": ["customer_id SERIAL PRIMARY KEY", "name VARCHAR(100)", "email VARCHAR(255)"], "sample_data": [[1, "Alice Johnson", "alice@email.com"], [2, "Bob Smith", "bob@email.com"], [3, "Carol White", "carol@email.com"]]},
-    {"name": "orders", "columns": ["order_id SERIAL PRIMARY KEY", "customer_id INT REFERENCES customers(customer_id)", "amount DECIMAL(10,2)", "order_date DATE"], "sample_data": [[1, 1, 500.00, "2024-01-10"], [2, 1, 750.00, "2024-01-15"], [3, 2, 200.00, "2024-01-12"], [4, 3, 1500.00, "2024-01-20"]]}
+    {"name": "customers", "columns": ["id SERIAL PRIMARY KEY", "name VARCHAR"], "sample_data": [[1, "Alice"], [2, "Bob"]]},
+    {"name": "orders", "columns": ["id SERIAL PRIMARY KEY", "cust_id INT", "amt DECIMAL"], "sample_data": [[1, 1, 500], [2, 1, 750]]}
   ],
-  "setup_sql": "CREATE TABLE customers (customer_id SERIAL PRIMARY KEY, name VARCHAR(100), email VARCHAR(255)); CREATE TABLE orders (order_id SERIAL PRIMARY KEY, customer_id INT, amount DECIMAL(10,2), order_date DATE); INSERT INTO customers (name, email) VALUES ('Alice Johnson', 'alice@email.com'), ('Bob Smith', 'bob@email.com'), ('Carol White', 'carol@email.com'); INSERT INTO orders (customer_id, amount, order_date) VALUES (1, 500.00, '2024-01-10'), (1, 750.00, '2024-01-15'), (2, 200.00, '2024-01-12'), (3, 1500.00, '2024-01-20');",
-  "expected_query": "SELECT c.name, SUM(o.amount) AS total_spent FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name HAVING SUM(o.amount) > 1000 ORDER BY total_spent DESC;",
+  "setup_sql": "CREATE TABLE customers (id SERIAL PRIMARY KEY, name VARCHAR); CREATE TABLE orders (id SERIAL PRIMARY KEY, cust_id INT, amt DECIMAL); INSERT INTO customers (name) VALUES ('Alice'), ('Bob'); INSERT INTO orders (cust_id, amt) VALUES (1, 500), (1, 750);",
+  "expected_query": "SELECT c.name, SUM(o.amt) AS total_spent FROM customers c JOIN orders o ON c.id = o.cust_id GROUP BY c.id, c.name HAVING SUM(o.amt) > 1000 ORDER BY total_spent DESC;",
   "expected_columns": ["name", "total_spent"],
-  "hints": ["You need to combine data from two tables", "Use GROUP BY with an aggregate function", "HAVING filters after aggregation"]
+  "hints": ["JOIN customers and orders", "GROUP BY customer", "HAVING SUM(amt) > 1000"]
 }""",
 
     "hard": """{
-  "title": "Running Revenue by Month",
-  "description": "Calculate each month's revenue and the cumulative running total of revenue. Show the month (as date), monthly revenue, and running total. Order by month ascending.",
+  "title": "Monthly Revenue Growth",
+  "description": "Show month, revenue, and running total revenue. Order by month.",
   "tables": [
-    {"name": "orders", "columns": ["order_id SERIAL PRIMARY KEY", "amount DECIMAL(10,2)", "created_at DATE"], "sample_data": [[1, 500.00, "2024-01-15"], [2, 750.00, "2024-01-20"], [3, 300.00, "2024-02-10"], [4, 900.00, "2024-02-25"], [5, 450.00, "2024-03-05"]]}
+    {"name": "orders", "columns": ["id SERIAL PRIMARY KEY", "amt DECIMAL", "dt DATE"], "sample_data": [[1, 500, "2024-01-15"], [2, 750, "2024-02-20"]]}
   ],
-  "setup_sql": "CREATE TABLE orders (order_id SERIAL PRIMARY KEY, amount DECIMAL(10,2), created_at DATE); INSERT INTO orders (amount, created_at) VALUES (500.00, '2024-01-15'), (750.00, '2024-01-20'), (300.00, '2024-02-10'), (900.00, '2024-02-25'), (450.00, '2024-03-05');",
-  "expected_query": "WITH monthly AS (SELECT DATE_TRUNC('month', created_at) AS month, SUM(amount) AS revenue FROM orders GROUP BY DATE_TRUNC('month', created_at)) SELECT month, revenue, SUM(revenue) OVER (ORDER BY month) AS running_total FROM monthly ORDER BY month;",
-  "expected_columns": ["month", "revenue", "running_total"],
-  "hints": ["Aggregate by month first", "Consider using a CTE or subquery", "Window functions can compute running totals with SUM() OVER()"]
+  "setup_sql": "CREATE TABLE orders (id SERIAL PRIMARY KEY, amt DECIMAL, dt DATE); INSERT INTO orders (amt, dt) VALUES (500, '2024-01-15'), (750, '2024-02-20');",
+  "expected_query": "WITH m AS (SELECT DATE_TRUNC('month', dt) as mon, SUM(amt) as rev FROM orders GROUP BY 1) SELECT mon, rev, SUM(rev) OVER (ORDER BY mon) as run_tot FROM m ORDER BY mon;",
+  "expected_columns": ["mon", "rev", "run_tot"],
+  "hints": ["Group by month first", "Use window function SUM() OVER()"]
 }"""
 }
 
 # Difficulty guide for prompts
 DIFFICULTY_GUIDE = {
-    "easy": "Single table, basic SELECT/WHERE/ORDER BY, 1-2 conditions, no JOINs",
-    "medium": "1-2 JOINs, GROUP BY + HAVING, basic subqueries, 2-3 tables",
-    "hard": "Multiple JOINs, window functions (ROW_NUMBER, RANK, SUM OVER), CTEs, complex aggregations, 3-5 tables",
+    "easy": "Single table, basic SELECT/WHERE/ORDER BY",
+    "medium": "2-3 tables, JOINs, GROUP BY + HAVING",
+    "hard": "3-5 tables, Window functions, CTEs",
 }
 
 
@@ -81,40 +79,27 @@ def build_prompt(difficulty: str, domain: str) -> str:
     
     return f"""Generate a SQL practice question.
 
-DIFFICULTY: {difficulty}
-DIFFICULTY REQUIREMENTS: {DIFFICULTY_GUIDE.get(difficulty, DIFFICULTY_GUIDE["medium"])}
-
+DIFFICULTY: {difficulty} ({DIFFICULTY_GUIDE.get(difficulty)})
 DOMAIN: {domain}
 
-OUTPUT FORMAT (strict JSON, no markdown code blocks):
+OUTPUT FORMAT (JSON only):
 {{
-  "title": "Short descriptive title (3-6 words)",
-  "description": "2-3 sentence problem statement. State WHAT to find, not HOW. Be specific about output requirements.",
-  "tables": [
-    {{
-      "name": "table_name",
-      "columns": ["col1 TYPE", "col2 TYPE"],
-      "sample_data": [["val1", "val2"], ...]
-    }}
-  ],
-  "setup_sql": "CREATE TABLE ...; INSERT INTO ... VALUES ...;",
+  "title": "Title",
+  "description": "Problem statement.",
+  "tables": [{{"name": "t1", "columns": ["id SERIAL", "c1 TYPE"], "sample_data": [[1, "v"]]}}],
+  "setup_sql": "CREATE TABLE ...; INSERT INTO ...;",
   "expected_query": "SELECT ...",
-  "expected_columns": ["col1", "col2"],
-  "hints": ["Hint 1 (vague)", "Hint 2 (more specific)", "Hint 3 (nearly gives it away)"]
+  "expected_columns": ["c1"],
+  "hints": ["hint1", "hint2"]
 }}
 
 CONSTRAINTS:
-- Tables: 1-{max_tables} tables, max {settings.max_practice_rows} total rows across all tables
-- Column names: Use snake_case (user_id, created_at, total_amount)
-- Data: Use realistic values (real names, plausible dates, sensible amounts). NO placeholder text like "test", "example", "foo".
-- expected_query: Must be deterministic. Always include ORDER BY if results could vary.
-- PostgreSQL 14 syntax only. Use appropriate types (SERIAL, VARCHAR, DECIMAL, DATE, TIMESTAMP, BOOLEAN).
-- Ensure all foreign key references are valid in the sample data.
+- Max {max_tables} tables, {settings.max_practice_rows} total rows
+- Realistic data, no placeholders
+- Valid PostgreSQL 14 syntax
 
-EXAMPLE for {difficulty} difficulty:
-{FEW_SHOTS.get(difficulty, FEW_SHOTS["medium"])}
-
-Generate a DIFFERENT question in the {domain} domain. Be creative with the scenario."""
+EXAMPLE ({difficulty}):
+{FEW_SHOTS.get(difficulty, FEW_SHOTS["medium"])}"""
 
 
 async def generate_question(
