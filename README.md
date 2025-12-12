@@ -2,7 +2,7 @@
 
 Artificially Intelligent Development Environment for SQL learning.
 
-A local SQL IDE with LLM-powered practice question generation, similar to LeetCode/HackerRank for SQL.
+A local SQL IDE with LLM-powered practice question generation, similar to LeetCode/HackerRank for SQL. Ultimately will be capable of producing practice questions for targeted areas e.g. utiliing window functions
 
 ## Features
 
@@ -11,6 +11,11 @@ A local SQL IDE with LLM-powered practice question generation, similar to LeetCo
 - **Answer Checking**: Automatic validation against expected results
 - **Progress Tracking**: Local history of solved questions
 - **Isolated Environments**: Each practice session runs in its own PostgreSQL schema
+
+## Progression & Next Steps
+
+- Currently generates queries within 15 secs
+- The queries generated are quite limited in depth due to model selection (developed to usable on M1 Pro 16gb)
 
 ## Prerequisites
 
@@ -134,24 +139,6 @@ Practice schemas are created per session. To clean up old schemas:
 ```bash
 cd backend
 python cleanup.py --max-age-hours 2
-```
-
-## Development
-
-### Backend
-
-```bash
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
-
-API docs available at http://localhost:8000/docs
-
-### Frontend
-
-```bash
-cd frontend
-npm run dev
 ```
 
 ## Tech Stack
