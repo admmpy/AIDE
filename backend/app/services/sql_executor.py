@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 from typing import Any
 
@@ -8,6 +9,17 @@ from app.config import get_settings
 from app.models.schemas import SQLExecuteResponse
 
 settings = get_settings()
+
+# Valid schema name pattern: practice_ followed by 8 hex characters
+SCHEMA_NAME_PATTERN = re.compile(r"^practice_[a-f0-9]{8}$")
+
+
+def validate_schema_name(schema_name: str) -> bool:
+    """
+    Validate that a schema name matches the expected pattern.
+    Prevents SQL injection via malicious schema names.
+    """
+    return bool(SCHEMA_NAME_PATTERN.match(schema_name))
 
 
 async def execute_query(
@@ -38,6 +50,11 @@ async def execute_query(
     try:
         # Set schema search path if specified
         if schema_name:
+            if not validate_schema_name(schema_name):
+                return SQLExecuteResponse(
+                    success=False,
+                    error="Invalid schema name format"
+                )
             await conn.execute(f"SET search_path TO {schema_name}, public")
         
         # Execute with timeout
@@ -126,6 +143,10 @@ async def execute_setup_sql(
     Returns:
         Tuple of (success, error_message)
     """
+    # Validate schema name to prevent SQL injection
+    if not validate_schema_name(schema_name):
+        return False, "Invalid schema name format"
+    
     try:
         # Create schema if it doesn't exist
         await conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")

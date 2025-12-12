@@ -15,7 +15,7 @@ from app.models.schemas import (
     Question,
 )
 from app.services.question_gen import generate_question, generate_schema_name
-from app.services.sql_executor import execute_query, execute_setup_sql
+from app.services.sql_executor import execute_query, execute_setup_sql, validate_schema_name
 
 settings = get_settings()
 router = APIRouter(prefix="/practice", tags=["practice"])
@@ -117,6 +117,10 @@ async def check_answer(request: CheckAnswerRequest) -> CheckAnswerResponse:
     
     Compares user query output against the expected query output.
     """
+    # Validate schema name format to prevent SQL injection
+    if not validate_schema_name(request.schema_name):
+        raise HTTPException(status_code=400, detail="Invalid schema name format")
+    
     session = _active_sessions.get(request.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -217,10 +221,14 @@ async def cleanup_session(session_id: str) -> dict:
     
     schema_name = session["schema_name"]
     
+    # Validate schema name before using in SQL (defense in depth)
+    if not validate_schema_name(schema_name):
+        raise HTTPException(status_code=400, detail="Invalid schema name format")
+    
     async with get_connection() as conn:
         try:
             await conn.execute(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE")
-        except Exception as e:
+        except Exception:
             # Log but don't fail - schema might already be cleaned
             pass
     

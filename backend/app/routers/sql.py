@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.database import get_connection
 from app.models.schemas import SQLExecuteRequest, SQLExecuteResponse
-from app.services.sql_executor import execute_query
+from app.services.sql_executor import execute_query, validate_schema_name
 
 router = APIRouter(prefix="/sql", tags=["sql"])
 
@@ -31,6 +31,13 @@ async def execute_sql(request: SQLExecuteRequest) -> SQLExecuteResponse:
                     status_code=400,
                     detail=f"Statement type '{keyword}' is not allowed in free query mode"
                 )
+    else:
+        # Validate schema name format to prevent SQL injection
+        if not validate_schema_name(request.schema_name):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid schema name format"
+            )
     
     async with get_connection() as conn:
         result = await execute_query(
