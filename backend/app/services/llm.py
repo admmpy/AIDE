@@ -7,7 +7,7 @@ from app.config import get_settings
 settings = get_settings()
 
 
-MODEL = "qwen3:4b"  # Fixed model - do not change
+DEFAULT_MODEL = settings.ollama_model
 
 
 class OllamaClient:
@@ -16,10 +16,12 @@ class OllamaClient:
     def __init__(
         self,
         base_url: str | None = None,
+        model: str | None = None,
         timeout: float = 300.0,
     ):
         self.base_url = base_url or settings.ollama_base_url
-        self.model = MODEL  # Always use qwen3:4b
+        # Allow caller or env to choose model; fall back to configured default
+        self.model = model or DEFAULT_MODEL
         self.timeout = timeout
     
     async def generate(
@@ -27,7 +29,7 @@ class OllamaClient:
         prompt: str,
         system: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 2048,
+        max_tokens: int = 768,
     ) -> str:
         """
         Generate text using Ollama.
@@ -53,7 +55,9 @@ class OllamaClient:
         
         if system:
             payload["system"] = system
-        
+        # Ensure JSON-only output which avoids 'thinking' field confusion
+        payload["format"] = "json"
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/generate",
@@ -67,7 +71,7 @@ class OllamaClient:
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 2048,
+        max_tokens: int = 768,
     ) -> str:
         """
         Chat completion using Ollama.
@@ -89,6 +93,8 @@ class OllamaClient:
                 "num_predict": max_tokens,
             },
         }
+        # Ensure JSON-only output for chat mode as well
+        payload["format"] = "json"
         
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
@@ -131,15 +137,20 @@ def extract_json(text: str) -> str:
     # Remove thinking tags from qwen3 if present
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     
+    # Helper to strip trailing commas that often break JSON parse
+    def _remove_trailing_commas(txt: str) -> str:
+        # comma followed by optional whitespace and either }} or ]]
+        return re.sub(r",\s*(?=[}\]])", "", txt)
+
     # Try to find JSON in code blocks first
     code_block_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
     if code_block_match:
-        return code_block_match.group(1).strip()
+        return _remove_trailing_commas(code_block_match.group(1).strip())
     
     # Try to find raw JSON object
     json_match = re.search(r"\{[\s\S]*\}", text)
     if json_match:
-        return json_match.group(0)
+        return _remove_trailing_commas(json_match.group(0))
     
     raise ValueError("No JSON found in response")
 
