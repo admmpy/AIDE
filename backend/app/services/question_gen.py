@@ -129,6 +129,7 @@ EXAMPLE ({difficulty}):
 async def generate_question(
     difficulty: Difficulty,
     domain: str | None = None,
+    model_id: str | None = None,
     max_retries: int = 2,
 ) -> Question:
     """
@@ -166,12 +167,14 @@ Please fix the issue and regenerate. Remember:
                     prompt=retry_prompt,
                     system=SYSTEM_PROMPT,
                     temperature=0.7,
+                    model=model_id,
                 )
             else:
                 raw_response = await llm_client.generate(
                     prompt=prompt,
                     system=SYSTEM_PROMPT,
                     temperature=0.7,
+                    model=model_id,
                 )
             
             # Extract and parse JSON
@@ -216,6 +219,7 @@ Please fix the issue and regenerate. Remember:
 
 async def generate_custom_question(
     user_prompt: str,
+    model_id: str | None = None,
     max_retries: int = 2,
 ) -> Question:
     """Generate a practice question using the LLM from a natural-language request."""
@@ -238,12 +242,14 @@ Please fix the issue and regenerate. Remember:
                     prompt=retry_prompt,
                     system=SYSTEM_PROMPT,
                     temperature=0.7,
+                    model=model_id,
                 )
             else:
                 raw_response = await llm_client.generate(
                     prompt=prompt,
                     system=SYSTEM_PROMPT,
                     temperature=0.7,
+                    model=model_id,
                 )
 
             json_str = extract_json(raw_response)

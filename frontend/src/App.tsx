@@ -1,9 +1,11 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { CustomQuestionPanel } from './components/FreeQueryPanel';
-import { PracticePanel } from './components/PracticePanel';
-import { HistoryPanel } from './components/HistoryPanel';
+import { AIGeneratorModal } from './components/AIGeneratorModal';
+import { EditorPanel } from './components/EditorPanel';
+import { Navbar } from './components/Navbar';
+import { OutputPanel } from './components/OutputPanel';
+import { QuestionPanel } from './components/QuestionPanel';
+import { QuestionSidebar } from './components/QuestionSidebar';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -12,71 +14,34 @@ const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
     },
+    mutations: {
+      retry: 0,
+    },
   },
 });
 
-type Tab = 'query' | 'practice' | 'history';
-
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<Tab>('practice');
-
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="logo">
-          <h1>AIDE</h1>
-          <span className="tagline">SQL Practice Platform</span>
+    <div className="app-shell">
+      <Navbar />
+      <main className="workspace">
+        <QuestionSidebar />
+        <QuestionPanel />
+        <div className="right-pane">
+          <EditorPanel />
+          <OutputPanel />
         </div>
-        
-        <nav className="nav-tabs">
-          <button
-            className={`tab ${activeTab === 'query' ? 'active' : ''}`}
-            onClick={() => setActiveTab('query')}
-          >
-            Custom Question
-          </button>
-          <button
-            className={`tab ${activeTab === 'practice' ? 'active' : ''}`}
-            onClick={() => setActiveTab('practice')}
-          >
-            Practice
-          </button>
-          <button
-            className={`tab ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
-          >
-            History
-          </button>
-        </nav>
-      </header>
-
-      <main className="app-main">
-        {activeTab === 'query' && <CustomQuestionPanel />}
-        {activeTab === 'practice' && <PracticePanel />}
-        {activeTab === 'history' && <HistoryPanel />}
       </main>
-
-      <footer className="app-footer">
-        <span>Powered by PostgreSQL 14 & Ollama</span>
-      </footer>
+      <AIGeneratorModal />
     </div>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppContent />
-      <Toaster 
-        position="top-right" 
-        richColors 
-        closeButton
-        toastOptions={{
-          duration: 4000,
-        }}
-      />
+      <Toaster position="top-right" richColors closeButton />
     </QueryClientProvider>
   );
 }
-
-export default App;

@@ -10,6 +10,7 @@ from app.models.schemas import (
     GenerateQuestionRequest,
     GenerateCustomQuestionRequest,
     GenerateQuestionResponse,
+    ModelOption,
     CheckAnswerRequest,
     CheckAnswerResponse,
     HintResponse,
@@ -28,6 +29,15 @@ _active_sessions: dict[str, dict] = {}
 # Rate limiting: track generation requests per session
 _rate_limits: dict[str, list[float]] = defaultdict(list)
 
+MODEL_METADATA: dict[str, tuple[str, str]] = {
+    "openai/gpt-4o-mini": ("GPT-4o Mini", "Fast and affordable"),
+    "openai/gpt-4o": ("GPT-4o", "Most capable OpenAI model"),
+    "anthropic/claude-3.5-sonnet": ("Claude 3.5 Sonnet", "Strong for reasoning and SQL tasks"),
+    "meta-llama/llama-3.1-8b-instruct:free": ("Llama 3.1 8B (Free)", "Free-tier model"),
+    "google/gemini-flash-1.5": ("Gemini Flash 1.5", "Fast and cost-effective"),
+    "deepseek/deepseek-chat": ("DeepSeek Chat", "Cost-effective general model"),
+}
+
 
 def _check_rate_limit(session_id: str) -> bool:
     """Check if session has exceeded rate limit."""
@@ -44,6 +54,32 @@ def _check_rate_limit(session_id: str) -> bool:
     
     _rate_limits[session_id].append(now)
     return True
+
+
+def _validate_or_default_model(model_id: str | None) -> str | None:
+    if not model_id:
+        return None
+    if model_id not in settings.allowed_models_list():
+        raise HTTPException(status_code=400, detail=f"Model '{model_id}' is not allowed")
+    return model_id
+
+
+@router.get("/models", response_model=list[ModelOption])
+async def get_models() -> list[ModelOption]:
+    allowed = settings.allowed_models_list()
+    default_id = settings.openrouter_default_model
+    result: list[ModelOption] = []
+    for model_id in allowed:
+        name, description = MODEL_METADATA.get(model_id, (model_id, "Allowed model"))
+        result.append(
+            ModelOption(
+                id=model_id,
+                name=name,
+                description=description,
+                is_default=model_id == default_id,
+            )
+        )
+    return result
 
 
 @router.post("/generate", response_model=GenerateQuestionResponse)
@@ -67,17 +103,19 @@ async def generate_practice_question(
         )
     
     try:
+        model_id = _validate_or_default_model(request.model_id)
         # Generate question using LLM
         question = await generate_question(
             difficulty=request.difficulty,
             domain=request.domain,
+            model_id=model_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to generate question. Is Ollama running? Error: {str(e)}",
+            detail=f"Failed to generate question via OpenRouter. Error: {str(e)}",
         )
     
     # Create isolated schema and set up tables
@@ -124,13 +162,17 @@ async def generate_custom_practice_question(
         )
 
     try:
-        question = await generate_custom_question(user_prompt=request.user_prompt)
+        model_id = _validate_or_default_model(request.model_id)
+        question = await generate_custom_question(
+            user_prompt=request.user_prompt,
+            model_id=model_id,
+        )
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Failed to generate question. Is Ollama running? Error: {str(e)}",
+            detail=f"Failed to generate question via OpenRouter. Error: {str(e)}",
         )
 
     schema_name = generate_schema_name()
