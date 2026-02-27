@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_default_model: str = "openai/gpt-4o-mini"
     openrouter_allowed_models: str = (
-        "openai/gpt-4o-mini,openai/gpt-4o,anthropic/claude-3.5-sonnet"
+        "openai/gpt-4o-mini,google/gemini-3-flash-preview,z-ai/glm-5"
     )
 
     # Query limits
