@@ -5,6 +5,8 @@ export function QuestionPanel() {
   const state = useAppStore();
   const question = getCurrentQuestion(state);
   const hintQuery = useGetHint(question?.sessionId || null);
+  const questionKey = question?.id || question?.sessionId || '';
+  const latestExpected = questionKey ? state.expectedByQuestionId[questionKey] : null;
 
   if (!question) {
     return <section className="question-panel empty">Generate or select a question to start.</section>;
@@ -40,18 +42,66 @@ export function QuestionPanel() {
       <div className="question-content">
         {state.activeTab === 'question' && (
           <>
-            <p>{question.description}</p>
+            <p className="question-description">{question.description}</p>
             <h4>Tables</h4>
             {question.tables.map((t) => (
               <div key={t.name} className="table-card">
                 <strong>{t.name}</strong>
+                <h5>Schema</h5>
                 <ul>
                   {t.columns.map((col, idx) => (
                     <li key={idx}>{col}</li>
                   ))}
                 </ul>
+                <h5>Initial Rows</h5>
+                <div className="results-table-wrapper table-sample-wrapper">
+                  <table className="results-table table-sample">
+                    <thead>
+                      <tr>
+                        {t.columns.map((col, idx) => (
+                          <th key={idx}>{col.split(' ')[0]}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {t.sample_data.map((row, rowIdx) => (
+                        <tr key={rowIdx}>
+                          {row.map((cell, cellIdx) => (
+                            <td key={cellIdx}>{cell === null ? 'NULL' : String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
+            {latestExpected && (
+              <div className="latest-expected-block">
+                <h4>Latest Expected Output</h4>
+                <p className="hint">From your most recent valid Run &amp; Check.</p>
+                <div className="results-table-wrapper">
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        {latestExpected.columns.map((col, idx) => (
+                          <th key={idx}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {latestExpected.rows.map((row, rowIdx) => (
+                        <tr key={rowIdx}>
+                          {row.map((cell, cellIdx) => (
+                            <td key={cellIdx}>{cell === null ? 'NULL' : String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             <button onClick={revealHint} disabled={state.revealedHints.length >= question.hints.length || hintQuery.isFetching}>
               {state.revealedHints.length >= question.hints.length ? 'All hints revealed' : 'Reveal next hint'}
             </button>

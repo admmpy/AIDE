@@ -26,10 +26,19 @@ export function EditorPanel() {
         session_id: question.sessionId,
       });
 
+      const questionKey = question.id || question.sessionId || '';
+      if (!response.error && questionKey) {
+        state.setExpectedOutputForQuestion(
+          questionKey,
+          response.expected_columns,
+          response.expected_rows
+        );
+      }
+
       const status = response.error ? 'error' : response.correct ? 'correct' : 'wrong';
 
       state.addSubmission({
-        questionId: question.id || question.sessionId,
+        questionId: questionKey,
         sql,
         status,
         result: response,
@@ -48,7 +57,7 @@ export function EditorPanel() {
       });
 
       state.updateHistory({
-        questionId: question.id || question.sessionId || '',
+        questionId: questionKey,
         title: question.title,
         category: normalizeCategory(question),
         difficulty: question.difficulty,
@@ -59,8 +68,12 @@ export function EditorPanel() {
       });
 
       if (response.correct) toast.success('Correct answer');
-      else if (response.error) toast.error(response.error);
-      else toast.error(`Incorrect result. Row difference: ${response.row_diff}`);
+      else if (response.error) {
+        const label = response.failure_type === 'none' ? 'execution_error' : response.failure_type;
+        toast.error(`[${label}] ${response.failure_message || response.error}`);
+      } else {
+        toast.error(response.failure_message || `Incorrect result. Row difference: ${response.row_diff}`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to check answer');
     } finally {

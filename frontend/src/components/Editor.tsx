@@ -1,6 +1,7 @@
 import { useRef, useCallback } from 'react';
 import MonacoEditor, { type OnMount } from '@monaco-editor/react';
 import type { editor, IPosition } from 'monaco-editor';
+import { useAppStore } from '../stores/appStore';
 
 interface EditorProps {
   value: string;
@@ -18,6 +19,7 @@ export function Editor({
   readOnly = false,
 }: EditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const theme = useAppStore((s) => s.theme);
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
@@ -72,7 +74,7 @@ export function Editor({
       <MonacoEditor
         height={height}
         language="sql"
-        theme="vs-dark"
+        theme={theme === 'dark' ? 'vs-dark' : 'vs'}
         value={value}
         onChange={(v) => onChange(v || '')}
         onMount={handleMount}

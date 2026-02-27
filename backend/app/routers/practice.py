@@ -38,6 +38,32 @@ MODEL_METADATA: dict[str, tuple[str, str]] = {
     "deepseek/deepseek-chat": ("DeepSeek Chat", "Cost-effective general model"),
 }
 
+SYNTAX_CODES = {"42601"}
+MISSING_RELATION_OR_COLUMN_CODES = {"42P01", "42703"}
+TYPE_OR_FUNCTION_CODES = {"42883", "42804", "22P02"}
+RUNTIME_CODES = {"57014", "22012", "53200", "53300", "53400"}
+
+
+def _classify_sql_failure(error: str | None, error_code: str | None) -> tuple[str, str]:
+    """Map SQL execution errors to learner-facing categories."""
+    code = (error_code or "").upper()
+    message = (error or "").strip() or "Query execution failed."
+    lowered = message.lower()
+
+    if code in SYNTAX_CODES or "syntax error" in lowered:
+        return "syntax", "Syntax error: check query structure, commas, and clause order."
+
+    if code in MISSING_RELATION_OR_COLUMN_CODES or "does not exist" in lowered:
+        return "missing_relation_or_column", "Missing table/column: verify names and schema references."
+
+    if code in TYPE_OR_FUNCTION_CODES or "operator does not exist" in lowered or "function" in lowered:
+        return "type_or_function", "Type/function mismatch: verify casts, operators, and function signatures."
+
+    if code in RUNTIME_CODES or "timed out" in lowered:
+        return "runtime", "Runtime error: query execution failed due to timeout or runtime constraints."
+
+    return "runtime", "Execution error: review the SQL error details and retry."
+
 
 def _check_rate_limit(session_id: str) -> bool:
     """Check if session has exceeded rate limit."""
@@ -233,9 +259,14 @@ async def check_answer(request: CheckAnswerRequest) -> CheckAnswerResponse:
         )
         
         if not user_result.success:
+            failure_type, failure_message = _classify_sql_failure(
+                user_result.error, user_result.error_code
+            )
             return CheckAnswerResponse(
                 correct=False,
                 error=user_result.error,
+                failure_type=failure_type,
+                failure_message=failure_message,
             )
         
         # Execute expected query
@@ -250,6 +281,8 @@ async def check_answer(request: CheckAnswerRequest) -> CheckAnswerResponse:
             return CheckAnswerResponse(
                 correct=False,
                 error=f"Internal error: expected query failed - {expected_result.error}",
+                failure_type="runtime",
+                failure_message="Internal validation error: expected query failed.",
             )
     
     # Compare results
@@ -269,6 +302,18 @@ async def check_answer(request: CheckAnswerRequest) -> CheckAnswerResponse:
     
     correct = columns_match and rows_match
     row_diff = len(user_set.symmetric_difference(expected_set))
+    failure_type = "none"
+    failure_message = None
+    if not correct:
+        if not columns_match and not rows_match:
+            failure_type = "wrong_columns_and_rows"
+            failure_message = "Columns and rows do not match the expected output."
+        elif not columns_match:
+            failure_type = "wrong_columns"
+            failure_message = "Column names/order do not match expected output."
+        else:
+            failure_type = "wrong_rows"
+            failure_message = "Rows do not match expected output."
     
     return CheckAnswerResponse(
         correct=correct,
@@ -277,6 +322,8 @@ async def check_answer(request: CheckAnswerRequest) -> CheckAnswerResponse:
         expected_columns=expected_result.columns,
         expected_rows=expected_result.rows,
         row_diff=row_diff,
+        failure_type=failure_type,
+        failure_message=failure_message,
     )
 
 

@@ -21,6 +21,7 @@ class SQLExecuteResponse(BaseModel):
     row_count: int = 0
     truncated: bool = False
     error: str | None = None
+    error_code: str | None = None
     execution_time_ms: float = 0
 
 
@@ -101,6 +102,8 @@ class CheckAnswerResponse(BaseModel):
     expected_rows: list[list[Any]] = Field(default_factory=list)
     row_diff: int = 0
     error: str | None = None
+    failure_type: str = "none"
+    failure_message: str | None = None
 
 
 class HintResponse(BaseModel):

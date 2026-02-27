@@ -14,6 +14,7 @@ export interface SQLExecuteResponse {
   row_count: number;
   truncated: boolean;
   error: string | null;
+  error_code?: string | null;
   execution_time_ms: number;
 }
 
@@ -87,6 +88,16 @@ export interface CheckAnswerResponse {
   expected_rows: unknown[][];
   row_diff: number;
   error: string | null;
+  failure_type:
+    | 'none'
+    | 'syntax'
+    | 'missing_relation_or_column'
+    | 'type_or_function'
+    | 'runtime'
+    | 'wrong_columns'
+    | 'wrong_rows'
+    | 'wrong_columns_and_rows';
+  failure_message: string | null;
 }
 
 export interface HintResponse {

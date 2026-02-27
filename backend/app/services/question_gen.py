@@ -94,7 +94,15 @@ CONSTRAINTS:
 - Max {settings.max_practice_tables} tables, {settings.max_practice_rows} total rows
 - Realistic data, no placeholders
 - Valid PostgreSQL 14 syntax
-- Match the difficulty/topic requested by the user"""
+- Match the difficulty/topic requested by the user
+- Make the description detailed and interview-style (at least 180 words)
+- Description must include these section headers exactly:
+  1) Problem
+  2) Table Schema
+  3) Requirements
+  4) Example 1
+  5) Example 2
+- In Example sections, include both INPUT and EXPECTED OUTPUT in plain text table-like formatting"""
 
 
 def build_prompt(difficulty: str, domain: str) -> str:
@@ -121,6 +129,14 @@ CONSTRAINTS:
 - Max {max_tables} tables, {settings.max_practice_rows} total rows
 - Realistic data, no placeholders
 - Valid PostgreSQL 14 syntax
+- Description must be detailed and context-rich (at least 180 words)
+- Description must include these section headers exactly:
+  1) Problem
+  2) Table Schema
+  3) Requirements
+  4) Example 1
+  5) Example 2
+- Example sections must show INPUT and EXPECTED OUTPUT for concrete rows
 
 EXAMPLE ({difficulty}):
 {FEW_SHOTS.get(difficulty, FEW_SHOTS["medium"])}"""

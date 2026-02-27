@@ -66,7 +66,8 @@ async def execute_query(
         except asyncio.TimeoutError:
             return SQLExecuteResponse(
                 success=False,
-                error=f"Query timed out after {timeout} seconds"
+                error=f"Query timed out after {timeout} seconds",
+                error_code="57014",
             )
         
         execution_time = (time.perf_counter() - start_time) * 1000
@@ -107,6 +108,7 @@ async def execute_query(
         return SQLExecuteResponse(
             success=False,
             error=str(e),
+            error_code=getattr(e, "sqlstate", None),
             execution_time_ms=execution_time
         )
     except Exception as e:
