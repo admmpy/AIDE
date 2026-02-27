@@ -19,6 +19,8 @@ function inferCategory(prompt: string): string {
 export function Navbar() {
   const setIsAIModalOpen = useAppStore((s) => s.setIsAIModalOpen);
   const addQuestion = useAppStore((s) => s.addQuestion);
+  const theme = useAppStore((s) => s.theme);
+  const toggleTheme = useAppStore((s) => s.toggleTheme);
   const generateMutation = useGenerateQuestion();
 
   const handleQuickGenerate = async (difficulty: Difficulty) => {
@@ -55,6 +57,9 @@ export function Navbar() {
         ))}
         <button className="primary" onClick={() => setIsAIModalOpen(true)}>
           AI Prompt Window
+        </button>
+        <button onClick={toggleTheme}>
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
         </button>
       </div>
     </header>

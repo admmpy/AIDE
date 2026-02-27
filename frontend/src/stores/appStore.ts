@@ -26,6 +26,14 @@ export interface Submission {
   submittedAt: string;
 }
 
+export type ThemeMode = 'light' | 'dark';
+
+export interface ExpectedOutputSnapshot {
+  columns: string[];
+  rows: unknown[][];
+  updatedAt: string;
+}
+
 interface AppState {
   questions: Question[];
   currentQuestionId: string | null;
@@ -47,6 +55,9 @@ interface AppState {
   checkResult: CheckAnswerResponse | null;
   setCheckResult: (result: CheckAnswerResponse | null) => void;
 
+  expectedByQuestionId: Record<string, ExpectedOutputSnapshot>;
+  setExpectedOutputForQuestion: (questionId: string, columns: string[], rows: unknown[][]) => void;
+
   revealedHints: string[];
   setRevealedHints: (hints: string[]) => void;
   resetHints: () => void;
@@ -65,7 +76,16 @@ interface AppState {
 
   isRunning: boolean;
   setIsRunning: (running: boolean) => void;
+
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
 }
+
+const initialTheme: ThemeMode =
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -133,6 +153,15 @@ export const useAppStore = create<AppState>()(
       checkResult: null,
       setCheckResult: (result) => set({ checkResult: result }),
 
+      expectedByQuestionId: {},
+      setExpectedOutputForQuestion: (questionId, columns, rows) =>
+        set((state) => ({
+          expectedByQuestionId: {
+            ...state.expectedByQuestionId,
+            [questionId]: { columns, rows, updatedAt: new Date().toISOString() },
+          },
+        })),
+
       revealedHints: [],
       setRevealedHints: (hints) => set({ revealedHints: hints }),
       resetHints: () => set({ revealedHints: [] }),
@@ -151,6 +180,10 @@ export const useAppStore = create<AppState>()(
 
       isRunning: false,
       setIsRunning: (running) => set({ isRunning: running }),
+
+      theme: initialTheme,
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
     }),
     {
       name: 'aide-app-store-v2',
@@ -159,6 +192,8 @@ export const useAppStore = create<AppState>()(
         history: state.history,
         submissions: state.submissions,
         groupBy: state.groupBy,
+        expectedByQuestionId: state.expectedByQuestionId,
+        theme: state.theme,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

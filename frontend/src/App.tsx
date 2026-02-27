@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { OutputPanel } from './components/OutputPanel';
 import { QuestionPanel } from './components/QuestionPanel';
 import { QuestionSidebar } from './components/QuestionSidebar';
+import { useAppStore } from './stores/appStore';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -21,8 +22,10 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
+  const theme = useAppStore((s) => s.theme);
+
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={theme}>
       <Navbar />
       <main className="workspace">
         <QuestionSidebar />

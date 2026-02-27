@@ -28,7 +28,7 @@ export function ResultsTable({ result, isLoading }: ResultsTableProps) {
     return (
       <div className="results-error">
         <h4>Error</h4>
-        <pre>{result.error}</pre>
+        <pre className="results-error-message">{result.error}</pre>
       </div>
     );
   }
