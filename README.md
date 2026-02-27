@@ -1,153 +1,59 @@
-# AIDE - SQL Practice Platform
+# AIDE
 
-Artificially Intelligent Development Environment for SQL learning.
+Local SQL practice app with:
+- FastAPI backend + PostgreSQL
+- React/Vite frontend with Monaco editor
+- OpenRouter-powered question generation
 
-A local SQL IDE with LLM-powered practice question generation, similar to LeetCode/HackerRank for SQL. Capable of producing targetted practice questions as well as generating random questions based on difficulty
+## Requirements
 
-## Features
-
-- **SQL Editor**: Monaco-based editor with syntax highlighting and autocomplete
-- **Practice Mode**: LLM-generated questions with varying difficulty (Easy/Medium/Hard)
-- **Answer Checking**: Automatic validation against expected results
-- **Progress Tracking**: Local history of solved questions
-- **Isolated Environments**: Each practice session runs in its own PostgreSQL schema
-
-## Progression & Next Steps
-
-- Currently generates queries within 15 secs
-- The queries generated are quite limited in depth due to model selection (developed to usable on M1 Pro 16gb)
-
-## Prerequisites
-
-1. **PostgreSQL 14** running locally on port 5432
-2. **Ollama** with `qwen3:4b` model:
-   ```bash
-   # Install Ollama: https://ollama.com
-   ollama pull qwen3:4b
-   ```
-3. **Python 3.11+**
-4. **Node.js 18+**
+- PostgreSQL running locally
+- Python 3.11+
+- Node.js 18+
+- OpenRouter API key
 
 ## Quick Start
 
-### 1. Set up PostgreSQL
-
-Create a database for AIDE:
-
+1. Create DB:
 ```bash
 createdb aide
 ```
 
-Or with psql:
-
-```sql
-CREATE DATABASE aide;
-```
-
-### 2. Start the Backend
-
+2. Backend setup:
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
-
-# Start the server
-uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Start the Frontend
-
+3. Frontend setup:
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
 ```
 
-### 4. Start Ollama (if not running)
-
-```bash
-ollama serve
-```
-
-Open http://localhost:5173 in your browser.
-
-## Project Structure
-
-```
-xvr/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app
-│   │   ├── config.py            # Settings
-│   │   ├── database.py          # PostgreSQL connection
-│   │   ├── routers/
-│   │   │   ├── sql.py           # /sql/execute
-│   │   │   └── practice.py      # /practice/*
-│   │   ├── services/
-│   │   │   ├── sql_executor.py  # Query execution
-│   │   │   ├── llm.py           # Ollama client
-│   │   │   └── question_gen.py  # Question generation
-│   │   └── models/
-│   │       └── schemas.py       # Pydantic models
-│   ├── requirements.txt
-│   └── cleanup.py               # Schema cleanup script
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   └── stores/
-│   └── package.json
-└── README.md
-```
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/sql/execute` | POST | Execute SQL query |
-| `/practice/generate` | POST | Generate new question |
-| `/practice/check` | POST | Check answer |
-| `/practice/hint/{session_id}` | GET | Get hints |
-| `/practice/session/{session_id}` | DELETE | Cleanup session |
-
-## Configuration
-
-The backend uses environment variables (or `.env` file):
-
+4. Configure backend env at `backend/.env`:
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/aide
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen3:4b
-MAX_QUERY_ROWS=1000
-RATE_LIMIT_PER_MINUTE=3
+DATABASE_URL=postgresql://localhost:5432/aide
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_DEFAULT_MODEL=openai/gpt-4o-mini
+OPENROUTER_ALLOWED_MODELS=openai/gpt-4o-mini,google/gemini-3-flash-preview,z-ai/glm-5
 ```
 
-## Cleanup
+5. Run both services from repo root:
+```bash
+./run-dev.sh
+```
 
-Practice schemas are created per session. To clean up old schemas:
+Frontend: `http://127.0.0.1:5173`  
+Backend: `http://127.0.0.1:8000`
+
+## Useful Commands
 
 ```bash
-cd backend
-python cleanup.py --max-age-hours 2
+cd frontend && npm run lint
+cd frontend && npm run build
+cd frontend && npm test
+cd frontend && npm run test:browser
 ```
-
-## Tech Stack
-
-- **Frontend**: React 18, TypeScript, Vite, Monaco Editor, Zustand, TanStack Query
-- **Backend**: Python 3.11+, FastAPI, asyncpg
-- **Database**: PostgreSQL 14
-- **LLM**: Ollama with qwen3:4b
-
-## License
-
-MIT
