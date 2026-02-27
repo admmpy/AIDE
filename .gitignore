@@ -36,3 +36,6 @@ build/
 
 # Coverage
 .coverage
+
+# Local agent instructions
+AGENTS.md
