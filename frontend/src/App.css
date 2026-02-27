@@ -79,6 +79,9 @@ button:disabled {
   display: grid;
   grid-template-columns: 280px 1.3fr 1fr;
   gap: 0.8rem;
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
 }
 
 .sidebar,
@@ -96,6 +99,9 @@ button:disabled {
   min-height: 0;
   padding: 0.75rem;
   gap: 0.6rem;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
 }
 
 .sidebar-header {
@@ -177,6 +183,9 @@ button:disabled {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  z-index: 3;
+  isolation: isolate;
 }
 
 .question-panel.empty {
@@ -222,6 +231,9 @@ button:disabled {
   gap: 0.35rem;
   padding: 0.6rem 1rem;
   border-bottom: 1px solid #e2e8f0;
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .question-tabs button.active {
@@ -232,10 +244,13 @@ button:disabled {
 
 .question-content {
   overflow: auto;
+  min-height: 0;
   padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  position: relative;
+  z-index: 1;
 }
 
 .table-card {
@@ -272,6 +287,10 @@ button:disabled {
   display: grid;
   grid-template-rows: 1fr 0.8fr;
   gap: 0.8rem;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
 }
 
 .editor-panel,
@@ -280,6 +299,8 @@ button:disabled {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 
 .panel-title-row {
@@ -301,6 +322,16 @@ button:disabled {
 .output-panel .results-loading {
   flex: 1;
   min-height: 0;
+}
+
+.editor-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-container .monaco-editor,
+.editor-container .overflow-guard {
+  max-width: 100%;
 }
 
 .modal-backdrop {
@@ -360,6 +391,7 @@ button:disabled {
   .workspace {
     grid-template-columns: 240px 1fr;
     grid-template-rows: auto auto;
+    overflow: auto;
   }
 
   .right-pane {
@@ -373,6 +405,7 @@ button:disabled {
   .workspace {
     display: flex;
     flex-direction: column;
+    overflow: visible;
   }
 
   .sidebar {
