@@ -1,20 +1,20 @@
-from pydantic import BaseModel, Field
-from typing import Any
 from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # SQL Execution
-# ─────────────────────────────────────────────────────────────────────────────
-
 class SQLExecuteRequest(BaseModel):
     """Request to execute a SQL query."""
+
     query: str = Field(..., min_length=1, max_length=10000)
     schema_name: str | None = Field(default=None, description="Optional schema to execute in")
 
 
 class SQLExecuteResponse(BaseModel):
     """Response from SQL query execution."""
+
     success: bool
     columns: list[str] = Field(default_factory=list)
     rows: list[list[Any]] = Field(default_factory=list)
@@ -24,10 +24,7 @@ class SQLExecuteResponse(BaseModel):
     execution_time_ms: float = 0
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Practice Mode
-# ─────────────────────────────────────────────────────────────────────────────
-
 class Difficulty(str, Enum):
     EASY = "easy"
     MEDIUM = "medium"
@@ -36,6 +33,7 @@ class Difficulty(str, Enum):
 
 class TableSchema(BaseModel):
     """Schema information for a single table."""
+
     name: str
     columns: list[str]
     sample_data: list[list[Any]]
@@ -43,6 +41,7 @@ class TableSchema(BaseModel):
 
 class Question(BaseModel):
     """A generated practice question."""
+
     title: str
     description: str
     tables: list[TableSchema]
@@ -54,24 +53,39 @@ class Question(BaseModel):
 
 class GenerateQuestionRequest(BaseModel):
     """Request to generate a new practice question."""
+
     difficulty: Difficulty = Difficulty.EASY
     domain: str | None = Field(default=None, description="Optional domain (e-commerce, HR, etc.)")
+    model_id: str | None = Field(default=None, description="Optional OpenRouter model id")
 
 
 class GenerateCustomQuestionRequest(BaseModel):
     """Request to generate a custom practice question from natural language."""
+
     user_prompt: str = Field(..., min_length=10, max_length=500)
+    model_id: str | None = Field(default=None, description="Optional OpenRouter model id")
 
 
 class GenerateQuestionResponse(BaseModel):
     """Response containing the generated question and session info."""
+
     question: Question
     schema_name: str
     session_id: str
 
 
+class ModelOption(BaseModel):
+    """An allowed model for question generation."""
+
+    id: str
+    name: str
+    description: str | None = None
+    is_default: bool = False
+
+
 class CheckAnswerRequest(BaseModel):
     """Request to check a user's answer."""
+
     query: str = Field(..., min_length=1, max_length=10000)
     schema_name: str
     session_id: str
@@ -79,6 +93,7 @@ class CheckAnswerRequest(BaseModel):
 
 class CheckAnswerResponse(BaseModel):
     """Response from answer checking."""
+
     correct: bool
     user_columns: list[str] = Field(default_factory=list)
     user_rows: list[list[Any]] = Field(default_factory=list)
@@ -90,5 +105,6 @@ class CheckAnswerResponse(BaseModel):
 
 class HintResponse(BaseModel):
     """Response containing hints for the current question."""
+
     hints: list[str]
     revealed_count: int

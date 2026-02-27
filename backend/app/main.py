@@ -67,16 +67,16 @@ async def health():
     db_status = "connected" if is_pool_available() else "disconnected"
     
     try:
-        ollama_ok = await llm_client.is_available()
-        ollama_status = "connected" if ollama_ok else "model not found"
+        openrouter_ok = await llm_client.is_available()
+        llm_status = "connected" if openrouter_ok else "unavailable"
     except Exception:
-        ollama_status = "disconnected"
+        llm_status = "unavailable"
     
-    overall = "healthy" if db_status == "connected" and ollama_status == "connected" else "degraded"
+    overall = "healthy" if db_status == "connected" and llm_status == "connected" else "degraded"
     
     return {
         "status": overall,
         "database": db_status,
-        "ollama": ollama_status,
+        "openrouter": llm_status,
         "database_url": settings.database_url.split("@")[-1] if "@" in settings.database_url else settings.database_url,
     }

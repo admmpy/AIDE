@@ -40,8 +40,12 @@ export interface TableSchema {
 export interface Question {
   id?: string;
   title: string;
+  subtitle?: string;
   description: string;
   difficulty: Difficulty;
+  category?: string;
+  source?: string;
+  assumptions?: string[];
   domain?: Domain;
   tables: TableSchema[];
   setup_sql: string;
@@ -49,6 +53,7 @@ export interface Question {
   expected_columns: string[];
   hints: string[];
   schemaName?: string;
+  sessionId?: string;
   createdAt?: string;
 }
 
@@ -65,6 +70,7 @@ export interface GenerateQuestionResponse {
 
 export interface GenerateCustomQuestionRequest {
   user_prompt: string;
+  model_id?: string;
 }
 
 export interface CheckAnswerRequest {
@@ -86,6 +92,13 @@ export interface CheckAnswerResponse {
 export interface HintResponse {
   hints: string[];
   revealed_count: number;
+}
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  description?: string;
+  is_default: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

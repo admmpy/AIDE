@@ -8,6 +8,7 @@ import type {
   CheckAnswerRequest,
   CheckAnswerResponse,
   HintResponse,
+  ModelOption,
 } from '../types';
 
 const API_BASE = 'http://localhost:8000';
@@ -74,6 +75,16 @@ export function useGenerateCustomQuestion() {
         body: JSON.stringify(request),
       });
     },
+  });
+}
+
+export function useGetModels() {
+  return useQuery({
+    queryKey: ['models'],
+    queryFn: async (): Promise<ModelOption[]> => {
+      return fetchApi<ModelOption[]>('/practice/models');
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
